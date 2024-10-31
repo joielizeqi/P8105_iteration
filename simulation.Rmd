@@ -93,6 +93,84 @@ sim_res |>
   geom_violin()
 ```
 
+# Simple linear regression
+```{r}
+sim_data = tibble(x = rnorm(30, 
+                            mean = 1, 
+                            sd = 1),
+                  y = 2 + 3 * x + rnorm(30, 0, 1))
+
+lm_fit = lm(y ~ x, data = sim_data)
+
+sim_data |> 
+  ggplot(aes(x = x,
+             y = y)) +
+  geom_point() +
+  stat_smooth(method = "lm")
+```
+
+Turn into a function
+```{r}
+sim_regression = function(n) {
+  tibble(x = rnorm(n, 
+                   mean = 1, 
+                   sd = 1),
+         y = 2 + 3 * x + rnorm(n, 0, 1))
+
+  lm_fit = lm(y ~ x, data = sim_data)
+
+  out_df = tibble(beta0_hat = coef(lm_fit)[1],
+                  beta1_hat = coef(lm_fit)[2])
+  
+  return(out_df)
+}
+
+sim_res = expand_grid(sample_size = c(30, 60),
+                      iter = 1:1000) |> 
+  mutate(lm_res = map(sample_size, \(n) sim_mean_sd(n))) |> 
+  unnest(lm_res)
+
+sim_res |> 
+  mutate(sample_size = str_c("n = ", sample_size)) |> 
+  ggplot(aes(x = sample_size,
+             y = beta1_hat)) +
+  geom_boxplot()
+
+sim_res |> 
+  filter(sample_size == 30) |> 
+  ggplot(aes(x = beta0_hat,
+             y = beta1_hat)) +
+  geom_point() + 
+  geom_smooth()
+```
 
 
+# Birthday simulation
+```{r}
+bday_sim = function(n) {
+  bdays = sample(1:365,
+                 size = n,
+                 replace = TRUE)
+  
+  dup = length(unique(bdays)) < n
+  
+  return(dup)
+}
+
+bday_sim(10)
+```
+
+Run for multiple times
+```{r}
+sim_res = expand_grid(n = 2:50,
+                      iter = 1:10000) |> 
+  mutate(res = map_lgl(n, bday_sim)) |> 
+  group_by(n) |> 
+  summarize(prob = mean(res))
+
+sim_res |> 
+  ggplot(aes(x = n,
+             y = prob)) +
+  geom_line()
+```
 
