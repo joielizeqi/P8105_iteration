@@ -1,0 +1,98 @@
+---
+title: "Simulation"
+author: "Zeqi Li"
+date: "2024-10-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+
+```{r}
+sim_df = tibble(x = rnorm(30, 10, 5))
+
+sim_df |> 
+  summarize(mean = mean(x),
+            sd = sd(x))
+```
+
+Putting into a function for simulation
+
+```{r}
+sim_mean_sd = function(samp_size = 30,
+                       true_mean = 10,
+                       true_sd = 5) {
+  sim_df = tibble(x = rnorm(samp_size, 
+                            true_mean, 
+                            true_sd))
+  
+  out_df = sim_df |> 
+    summarize(samp_mean = mean(x),
+              samp_sd = sd(x))
+  
+  return(out_df)
+}
+
+sim_mean_sd(samp_size = 30,
+            true_mean = 4,
+            true_sd = 12)
+```
+
+# Simulation
+`for` loop
+
+(to get the same results each time, use `set.seed()`)
+```{r}
+output = vector("list", 1000)
+
+for (i in 1:1000) {
+  output[[i]] = sim_mean_sd(30)
+}
+
+bind_rows(output) |> 
+  summarize(avg_samp_mean = mean(samp_mean),
+            SE_samp_sd = sd(samp_mean))
+```
+`map()`
+```{r}
+sim_res = tibble(iter = 1:1000) |> 
+  mutate(samp_res = map(iter, sim_mean_sd, samp_size = 30)) |> 
+  unnest()
+
+sim_res
+```
+With different sample sizes
+```{r}
+sim_res = expand_grid(n = c(10, 30, 60, 100),
+                      iter = 1:1000) |> 
+  mutate(samp_res = map(n, sim_mean_sd)) |> 
+  unnest()
+
+sim_res
+```
+```{r}
+sim_res |> 
+  group_by(n) |> 
+  summarize(se = sd(samp_mean))
+```
+
+Visualization
+```{r}
+sim_res |> 
+  filter(n == 30) |> 
+  ggplot(aes(x = samp_mean)) +
+  geom_histogram()
+
+sim_res |> 
+  mutate(n = str_c("n = ", n),
+         n = fct_inorder(n)) |> 
+  ggplot(aes(x = n,
+             y = samp_mean)) +
+  geom_violin()
+```
+
+
+
+
